@@ -104,4 +104,20 @@ class PersonController extends Controller
         $person->delete();
         return response()->json(null, 204);
     }
+
+    /**
+     * Get all coaches (people with coach user type).
+     */
+    public function getCoaches()
+    {
+        $coaches = Person::with('user', 'specializations')
+            ->whereHas('user', function ($query) {
+                $query->whereHas('userType', function ($q) {
+                    $q->where('type', 'coach');
+                });
+            })
+            ->get();
+
+        return response()->json($coaches);
+    }
 }

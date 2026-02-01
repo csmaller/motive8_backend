@@ -27,4 +27,5 @@ Route::get('/data', [ApiController::class, 'getData']);
 Route::apiResource('news', NewsController::class);
 Route::apiResource('events', EventController::class);
 Route::apiResource('people', PersonController::class);
+Route::get('/coaches', [PersonController::class, 'getCoaches']);
 Route::apiResource('users', UserController::class);
