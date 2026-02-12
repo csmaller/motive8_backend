@@ -33,20 +33,45 @@ class PersonController extends Controller
             'user_id' => 'required|exists:users,id',
             'first_name' => 'nullable|string|max:255',
             'last_name' => 'nullable|string|max:255',
-            'email' => 'nullable|email|unique:person',
+            'email' => 'nullable|email',
             'phone' => 'nullable|string|max:20',
             'bio' => 'nullable|string',
             'specialization' => 'nullable|string|max:255',
+            'specializations' => 'nullable|array',
             'experience_years' => 'nullable|integer',
             'certification' => 'nullable|string|max:255',
-            'image' => 'nullable|image|max:2048',
+            'image' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:5120', // 5MB max
         ]);
+        
+        // Remove specializations array (handle separately if needed)
+        if (isset($validated['specializations'])) {
+            unset($validated['specializations']);
+        }
+        
+        // Handle file upload
         if ($request->hasFile('image')) {
-            $validated['image'] = $request->file('image')->store('person_images', 'public');
+            $file = $request->file('image');
+            $filename = time() . '_' . $file->getClientOriginalName();
+            $path = $file->storeAs('person_images', $filename, 'public');
+            $validated['image'] = $path;
+        }
+
+        // Update user email if provided
+        if (isset($validated['email'])) {
+            $user = \App\Models\User::find($validated['user_id']);
+            if ($user) {
+                $user->update(['email' => $validated['email']]);
+            }
+            unset($validated['email']);
         }
 
         $person = Person::create($validated);
-        return response()->json($person, 201);
+        $person->load('user');
+        
+        return response()->json([
+            'message' => 'Person created successfully',
+            'person' => $person
+        ], 201);
     }
 
     /**
@@ -54,7 +79,7 @@ class PersonController extends Controller
      */
     public function show(Person $person)
     {
-        return response()->json($person->load('user', 'specializations'));
+        return response()->json($person->load('user'));
     }
 
     /**
@@ -70,30 +95,65 @@ class PersonController extends Controller
      */
     public function update(Request $request, Person $person)
     {
-        $validated = $request->validate([
+        // Check if this is a multipart form request
+        $isMultipart = $request->hasFile('image');
+        
+        $rules = [
             'user_id' => 'sometimes|exists:users,id',
             'first_name' => 'nullable|string|max:255',
             'last_name' => 'nullable|string|max:255',
-            'email' => 'nullable|email|unique:person,email,' . $person->id,
             'phone' => 'nullable|string|max:20',
             'bio' => 'nullable|string',
             'specialization' => 'nullable|string|max:255',
+            'specializations' => 'nullable|array',
             'experience_years' => 'nullable|integer',
             'certification' => 'nullable|string|max:255',
-            'image' => 'nullable|image|max:2048',
-        ]);
+            'image' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:5120',
+        ];
 
-        if ($request->hasFile('image')) {
-            // remove old image if exists
-            if ($person->image) {
+        // Validate email against users table if provided
+        if ($request->has('email')) {
+            $rules['email'] = 'nullable|email|unique:users,email,' . $person->user_id;
+        }
+
+        $validated = $request->validate($rules);
+
+        // Remove specializations array
+        if (isset($validated['specializations'])) {
+            unset($validated['specializations']);
+        }
+
+        // Handle file upload
+        if ($request->hasFile('image') && $request->file('image')->isValid()) {
+            \Log::info('Updating image for person ' . $person->id);
+            
+            // Delete old image if exists
+            if ($person->image && Storage::disk('public')->exists($person->image)) {
+                \Log::info('Deleting old image: ' . $person->image);
                 Storage::disk('public')->delete($person->image);
             }
+            
+            $file = $request->file('image');
+            $filename = time() . '_' . $file->getClientOriginalName();
+            $path = $file->storeAs('person_images', $filename, 'public');
+            $validated['image'] = $path;
+            
+            \Log::info('New image saved: ' . $path);
+        }
 
-            $validated['image'] = $request->file('image')->store('person_images', 'public');
+        // Update user email if provided
+        if (isset($validated['email'])) {
+            $person->user->update(['email' => $validated['email']]);
+            unset($validated['email']);
         }
 
         $person->update($validated);
-        return response()->json($person);
+        $person->load('user');
+        
+        return response()->json([
+            'message' => 'Person updated successfully',
+            'person' => $person
+        ]);
     }
 
     /**
@@ -110,7 +170,7 @@ class PersonController extends Controller
      */
     public function getCoaches()
     {
-        $coaches = Person::with('user', 'specializations')
+        $coaches = Person::with('user')
             ->whereHas('user', function ($query) {
                 $query->whereHas('userType', function ($q) {
                     $q->where('type', 'coach');

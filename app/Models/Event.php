@@ -9,19 +9,26 @@ class Event extends Model
 {
     use HasFactory;
 
-    public $timestamps = false;
-
     protected $fillable = [
         'title',
-        'start_date',
-        'end_date',
-        'start_end_time',
-        'details',
-        'sub_title'
+        'date',
+        'time',
+        'location',
+        'description',
+        'type',
+        'registration_required',
+        'max_participants',
+        'current_participants',
+        'registration_deadline',
+        'cost',
+        'image_url',
+        'payment_url'
     ];
 
     protected $casts = [
-        'start_date' => 'datetime',
-        'end_date' => 'datetime'
+        'date' => 'date',
+        'registration_deadline' => 'date',
+        'registration_required' => 'boolean',
+        'cost' => 'decimal:2'
     ];
 }

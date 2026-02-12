@@ -14,8 +14,20 @@ class News extends Model
 
     protected $fillable = [
         'title',
+        'slug',
+        'excerpt',
         'content',
-        'author_id'
+        'author_id',
+        'category',
+        'tags',
+        'featured',
+        'status',
+        'read_time'
+    ];
+
+    protected $casts = [
+        'tags' => 'array',
+        'featured' => 'boolean'
     ];
 
     public function author(): BelongsTo

@@ -1,6 +1,5 @@
 # IONOS-specific .htaccess for Laravel
 RewriteEngine On
-RewriteBase /
 
 # Handle Authorization Header
 RewriteCond %{HTTP:Authorization} .
@@ -11,7 +10,8 @@ RewriteCond %{REQUEST_FILENAME} !-d
 RewriteCond %{REQUEST_URI} (.+)/$
 RewriteRule ^ %1 [L,R=301]
 
-# Route all requests to the index.php inside the api folder
+# Route all requests to index.php
 RewriteCond %{REQUEST_FILENAME} !-d
 RewriteCond %{REQUEST_FILENAME} !-f
-RewriteRule ^(.+)$ api/index.php [L,QSA]
+# Changed (.) to (.+) to capture the entire URI string
+RewriteRule ^(.+)$ index.php [L,QSA]

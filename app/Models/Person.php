@@ -21,6 +21,7 @@ class Person extends Model
         'phone',
         'bio',
         'image',
+        'specialization',
         'experience_years',
         'certification'
     ];
@@ -32,17 +33,17 @@ class Person extends Model
         return $this->belongsTo(User::class);
     }
 
-    public function specializations(): HasMany
-    {
-        return $this->hasMany(PersonSpecialization::class);
-    }
-
     public function getImageUrlAttribute(): ?string
     {
         if (! $this->image) {
             return null;
         }
 
-        return Storage::disk('public')->url($this->image);
+        // Build URL without index.php
+        $baseUrl = rtrim(config('app.url'), '/');
+        // Remove /index.php if present
+        $baseUrl = str_replace('/index.php', '', $baseUrl);
+        
+        return $baseUrl . '/storage/' . $this->image;
     }
 }
